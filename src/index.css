@@ -1,0 +1,236 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', sans-serif;
+}
+
+:root {
+  --color-gold-50: #fbf7ee;
+  --color-gold-100: #f4eaaf;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #aa841c;
+  --color-gold-900: #3c2f0a;
+
+  --color-dark-bg: #09090b;
+  --color-dark-panel: rgba(18, 18, 22, 0.75);
+  --color-dark-border: rgba(255, 255, 255, 0.08);
+
+  --color-light-bg: #f4f4f6;
+  --color-light-panel: rgba(255, 255, 255, 0.7);
+  --color-light-border: rgba(0, 0, 0, 0.08);
+}
+
+/* Base custom styles */
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-dark-bg);
+  color: #f4f4f5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(15, 15, 20, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #fff;
+  transition: all 0.2s ease-in-out;
+}
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+  outline: none;
+}
+
+/* Dark mode overrides and styling utilities */
+.text-gold {
+  color: #d4af37;
+  background: linear-gradient(135deg, #fbf7ee 0%, #d4af37 50%, #aa841c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #d4af37 0%, #aa841c 100%);
+}
+
+.dark-luxury-bg {
+  background: radial-gradient(circle at top, #1c1917 0%, #09090b 100%);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.4);
+}
+
+/* Custom transitions and weather styles */
+.weather-rain-drop {
+  position: absolute;
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.4));
+  width: 1px;
+  height: 40px;
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-100px); opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.weather-cloud-slow {
+  animation: float 25s linear infinite;
+}
+
+@keyframes float {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+/* Keypad Grid for PIN */
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+/* Base styles for premium UI elements */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Light theme overrides */
+.light body {
+  background-color: var(--color-light-bg) !important;
+  color: #1f2937 !important;
+}
+
+.light .dark-luxury-bg {
+  background: radial-gradient(circle at top, #ffffff 0%, #e2e8f0 100%) !important;
+}
+
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04) !important;
+}
+
+.light .glass-input {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.light .glass-input:focus {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(212, 175, 55, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2) !important;
+}
+
+.light .text-white {
+  color: #0f172a !important;
+}
+
+.light .text-zinc-100 {
+  color: #1e293b !important;
+}
+
+.light .text-zinc-300 {
+  color: #334155 !important;
+}
+
+.light .text-zinc-400 {
+  color: #475569 !important;
+}
+
+.light .text-zinc-500 {
+  color: #64748b !important;
+}
+
+.light .bg-black\/30,
+.light .bg-black\/40,
+.light .bg-black\/45,
+.light .bg-black\/60 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .border-white\/5,
+.light .border-white\/8,
+.light .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .bg-white\/3 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.light .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.light .hover\:bg-white\/5:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+.light .text-zinc-500\/50 {
+  color: rgba(100, 116, 139, 0.5) !important;
+}
+
+.light input[type="text"],
+.light input[type="password"],
+.light textarea,
+.light select {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .gold-gradient-bg {
+  background: linear-gradient(135deg, #aa841c 0%, #d4af37 100%) !important;
+}
