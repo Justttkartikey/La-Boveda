@@ -1,9 +1,9 @@
 const CACHE_NAME = 'la-boveda-cache-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg'
+  './',
+  'index.html',
+  'manifest.json',
+  'favicon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => {
         // Fallback for offline if it fails
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('index.html');
         }
       });
     })
