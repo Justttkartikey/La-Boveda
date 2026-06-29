@@ -317,6 +317,7 @@ export const PasswordGenerator: React.FC = () => {
                   max={64}
                   value={pwLength}
                   onChange={(e) => setPwLength(Number(e.target.value))}
+                  onInput={(e) => setPwLength(Number((e.target as HTMLInputElement).value))}
                   className="w-full accent-[#d4af37] bg-white/5 rounded-lg appearance-none h-1 cursor-pointer"
                 />
               </div>
@@ -378,6 +379,7 @@ export const PasswordGenerator: React.FC = () => {
                 max={16}
                 value={pinLength}
                 onChange={(e) => setPinLength(Number(e.target.value))}
+                onInput={(e) => setPinLength(Number((e.target as HTMLInputElement).value))}
                 className="w-full accent-[#d4af37] bg-white/5 rounded-lg appearance-none h-1 cursor-pointer"
               />
             </div>
@@ -397,6 +399,7 @@ export const PasswordGenerator: React.FC = () => {
                   max={10}
                   value={wordCount}
                   onChange={(e) => setWordCount(Number(e.target.value))}
+                  onInput={(e) => setWordCount(Number((e.target as HTMLInputElement).value))}
                   className="w-full accent-[#d4af37] bg-white/5 rounded-lg appearance-none h-1 cursor-pointer"
                 />
               </div>
@@ -446,6 +449,7 @@ export const PasswordGenerator: React.FC = () => {
                 max={8}
                 value={recoveryChunks}
                 onChange={(e) => setRecoveryChunks(Number(e.target.value))}
+                onInput={(e) => setRecoveryChunks(Number((e.target as HTMLInputElement).value))}
                 className="w-full accent-[#d4af37] bg-white/5 rounded-lg appearance-none h-1 cursor-pointer"
               />
             </div>

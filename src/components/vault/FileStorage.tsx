@@ -337,7 +337,6 @@ export const FileStorage: React.FC<FileStorageProps> = ({
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept=".pdf,.png,.jpg,.jpeg,.txt,.json,.md"
                   />
                   
                   {loading ? (
@@ -353,7 +352,7 @@ export const FileStorage: React.FC<FileStorageProps> = ({
                         <p className="text-[10px] text-zinc-500 mt-1">or click to browse local files</p>
                       </div>
                       <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/5 rounded-md px-2 py-0.5 mt-2">
-                        PDF, PNG, JPG, JPEG, TXT, JSON, MD (Max 2MB)
+                        Any file format (Max 10MB)
                       </span>
                     </>
                   )}

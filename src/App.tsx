@@ -12,6 +12,7 @@ import { FileStorage } from './components/vault/FileStorage';
 import { PasswordGenerator } from './components/generator/PasswordGenerator';
 import { ControlRoom } from './components/controlroom/ControlRoom';
 import { BlackRoom } from './components/blackroom/BlackRoom';
+import logoImg from './assets/Logo.png';
 
 import {
   Shield,
@@ -153,7 +154,7 @@ const AppContent: React.FC = () => {
       {/* Upper Navigation Header */}
       <header className="glass-panel border-b border-white/5 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-2">
-          <img src={`${import.meta.env.BASE_URL}Logo.png`} alt="Logo" className="w-5 h-5 object-contain" />
+          <img src={logoImg} alt="Logo" className="w-5 h-5 object-contain" />
           <span className="text-sm font-extrabold tracking-widest font-display text-white">LA BÓVEDA</span>
           <span className="hidden sm:inline text-[9px] font-semibold text-[#d4af37] border border-[#d4af37]/20 bg-[#d4af37]/5 px-2 py-0.5 rounded-full uppercase tracking-wider">
             Trust No Cloud

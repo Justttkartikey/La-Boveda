@@ -231,7 +231,8 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
     e.preventDefault();
     setWipeError(null);
 
-    if (wipeConfirmInput !== 'ELIMINAR TODO') {
+    const upperInput = wipeConfirmInput.toUpperCase();
+    if (upperInput !== 'DELETE ALL' && upperInput !== 'ELIMINAR TODO') {
       setWipeError('Confirmation text is incorrect.');
       return;
     }
@@ -658,14 +659,14 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
                 <form onSubmit={handleWipeVault} className="space-y-3.5 max-w-md">
                   <div>
                     <label className="block text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5">
-                      Type "ELIMINAR TODO" to authorize wipe
+                      Type "DELETE ALL" to authorize wipe
                     </label>
                     <input
                       type="text"
                       value={wipeConfirmInput}
                       onChange={(e) => setWipeConfirmInput(e.target.value)}
                       className="w-full px-3.5 py-1.5 text-xs glass-input focus:outline-none border-rose-500/20"
-                      placeholder="ELIMINAR TODO"
+                      placeholder="DELETE ALL"
                       required
                     />
                   </div>
@@ -678,7 +679,7 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
 
                   <button
                     type="submit"
-                    disabled={wipeConfirmInput !== 'ELIMINAR TODO'}
+                    disabled={wipeConfirmInput.toUpperCase() !== 'DELETE ALL' && wipeConfirmInput.toUpperCase() !== 'ELIMINAR TODO'}
                     className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 rounded-2xl text-xs font-bold text-white transition-all disabled:opacity-50 active:scale-98"
                   >
                     Wipe Database and Re-initialize App

@@ -74,10 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setScreen('setup');
         } else {
           setHasBiometrics(info.hasBiometrics);
-          // Check webauthn support (primarily on mobile devices as requested)
-          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           const hasWebauthn = window.PublicKeyCredential !== undefined;
-          setBiometricsSupported(isMobile && hasWebauthn);
+          setBiometricsSupported(hasWebauthn);
           setScreen('weather');
         }
       } catch (err) {
@@ -139,17 +137,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Force immediate Pager/State resets
   };
 
-  // Lock vault when tab is hidden or minimized
+  // Lock vault when tab is hidden or minimized, but bypass if currently selecting a file
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && (screen === 'app' || screen === 'blackroom')) {
+        if ((window as any).isChoosingFile) {
+          return;
+        }
         lockVault();
+      }
+    };
+
+    const handleFileChooseClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        (target && target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'file') ||
+        (target && target.closest('.cursor-pointer') && (target.closest('.cursor-pointer') as HTMLElement).innerHTML.includes('type="file"'))
+      ) {
+        (window as any).isChoosingFile = true;
+      }
+    };
+
+    const handleWindowFocus = () => {
+      if ((window as any).isChoosingFile) {
+        setTimeout(() => {
+          (window as any).isChoosingFile = false;
+        }, 1500);
+      }
+    };
+
+    const handleFileChange = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'file') {
+        setTimeout(() => {
+          (window as any).isChoosingFile = false;
+        }, 1500);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('click', handleFileChooseClick, true);
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('change', handleFileChange, true);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', handleFileChooseClick, true);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('change', handleFileChange, true);
     };
   }, [screen]);
 
@@ -392,9 +427,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             authenticatorAttachment: 'platform',
             userVerification: 'required',
           },
-          extensions: {
-            hmacCreateSecret: true
-          }
         },
       }) as PublicKeyCredential;
 
@@ -402,63 +434,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const credentialId = arrayBufferToBase64(credential.rawId);
 
-      // Now create a signature to wrap the PIN
-      const signChallenge = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
-      const hmacSalt = new Uint8Array(32);
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge: signChallenge,
-          allowCredentials: [{ type: 'public-key', id: credential.rawId }],
-          userVerification: 'required',
-          extensions: {
-            hmacGetSecret: {
-              salt1: hmacSalt
-            }
-          } as any
-        }
-      }) as PublicKeyCredential & { response: AuthenticatorAssertionResponse };
-
-      if (!assertion) return false;
-
-      // Extract HMAC secret if supported by the platform/browser
-      const results = assertion.getClientExtensionResults() as any;
-      let secret: ArrayBuffer | null = null;
-      if (results && results.hmacGetSecret) {
-        const output = results.hmacGetSecret;
-        if (output.output instanceof ArrayBuffer) {
-          secret = output.output;
-        } else if (output instanceof ArrayBuffer) {
-          secret = output;
-        } else if (output.output && output.output.buffer instanceof ArrayBuffer) {
-          secret = output.output.buffer;
-        }
-      }
-
-      let wrapKey: CryptoKey;
-      let isHmac = false;
-
-      if (secret) {
-        const sigHashBytes = await window.crypto.subtle.digest('SHA-256', secret);
-        wrapKey = await window.crypto.subtle.importKey(
-          'raw',
-          sigHashBytes,
-          { name: 'AES-GCM' },
-          false,
-          ['encrypt']
-        );
-        isHmac = true;
-      } else {
-        // Fallback: generate a random key and store it locally
-        const fallbackKeyBytes = generateRandomBytes(32);
-        localStorage.setItem('lbv_biometric_fallback_key', arrayBufferToBase64(fallbackKeyBytes.buffer as ArrayBuffer));
-        wrapKey = await window.crypto.subtle.importKey(
-          'raw',
-          fallbackKeyBytes,
-          { name: 'AES-GCM' },
-          false,
-          ['encrypt']
-        );
-      }
+      // Generate a stable biometric wrapping key
+      const biometricKeyBytes = generateRandomBytes(32);
+      const wrapKey = await window.crypto.subtle.importKey(
+        'raw',
+        biometricKeyBytes,
+        { name: 'AES-GCM' },
+        false,
+        ['encrypt']
+      );
 
       // Encrypt the PIN with this wrap key
       const iv = generateRandomBytes(12);
@@ -469,14 +453,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pinBytes
       );
 
-      // Save credentials and wrapped PIN in local storage / IndexedDB
+      // Save credentials, key, and wrapped PIN in local storage / IndexedDB
       const wrappedData = {
         ciphertext: arrayBufferToBase64(encryptedPinBuffer),
         iv: arrayBufferToBase64(iv.buffer as ArrayBuffer),
-        isHmac,
       };
 
       localStorage.setItem('lbv_encrypted_pin_wrapped', JSON.stringify(wrappedData));
+      localStorage.setItem('lbv_biometric_key', arrayBufferToBase64(biometricKeyBytes.buffer as ArrayBuffer));
 
       // Update auth info
       const updatedInfo: DBAuthInfo & { encryptedPinTest: string } = {
@@ -504,7 +488,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const credentialIdBytes = new Uint8Array(base64ToArrayBuffer(info.webauthnCredentialId));
       const signChallenge = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
-      const hmacSalt = new Uint8Array(32);
 
       // Request biometric verification (assertion)
       const assertion = await navigator.credentials.get({
@@ -512,62 +495,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           challenge: signChallenge,
           allowCredentials: [{ type: 'public-key', id: credentialIdBytes }],
           userVerification: 'required',
-          extensions: {
-            hmacGetSecret: {
-              salt1: hmacSalt
-            }
-          } as any
         }
       }) as PublicKeyCredential & { response: AuthenticatorAssertionResponse };
 
       if (!assertion) return false;
 
-      // Extract HMAC secret if supported by the platform/browser
-      const results = assertion.getClientExtensionResults() as any;
-      let secret: ArrayBuffer | null = null;
-      if (results && results.hmacGetSecret) {
-        const output = results.hmacGetSecret;
-        if (output.output instanceof ArrayBuffer) {
-          secret = output.output;
-        } else if (output instanceof ArrayBuffer) {
-          secret = output;
-        } else if (output.output && output.output.buffer instanceof ArrayBuffer) {
-          secret = output.output.buffer;
-        }
-      }
-
-      // Decrypt PIN from localStorage
+      // Decrypt PIN from localStorage using the stored biometric key
       const wrappedStr = localStorage.getItem('lbv_encrypted_pin_wrapped');
-      if (!wrappedStr) return false;
+      const biometricKeyStr = localStorage.getItem('lbv_biometric_key');
+      if (!wrappedStr || !biometricKeyStr) return false;
 
       const wrappedObj = JSON.parse(wrappedStr);
       const ivBytes = new Uint8Array(base64ToArrayBuffer(wrappedObj.iv));
       const ciphertextBytes = base64ToArrayBuffer(wrappedObj.ciphertext);
 
-      let wrapKey: CryptoKey;
-
-      if (secret && wrappedObj.isHmac) {
-        const sigHashBytes = await window.crypto.subtle.digest('SHA-256', secret);
-        wrapKey = await window.crypto.subtle.importKey(
-          'raw',
-          sigHashBytes,
-          { name: 'AES-GCM' },
-          false,
-          ['decrypt']
-        );
-      } else {
-        // Use fallback key from localStorage
-        const fallbackKeyStr = localStorage.getItem('lbv_biometric_fallback_key');
-        if (!fallbackKeyStr) return false;
-        const fallbackKeyBytes = new Uint8Array(base64ToArrayBuffer(fallbackKeyStr));
-        wrapKey = await window.crypto.subtle.importKey(
-          'raw',
-          fallbackKeyBytes,
-          { name: 'AES-GCM' },
-          false,
-          ['decrypt']
-        );
-      }
+      const biometricKeyBytes = new Uint8Array(base64ToArrayBuffer(biometricKeyStr));
+      const wrapKey = await window.crypto.subtle.importKey(
+        'raw',
+        biometricKeyBytes,
+        { name: 'AES-GCM' },
+        false,
+        ['decrypt']
+      );
 
       const decryptedPinBuffer = await window.crypto.subtle.decrypt(
         { name: 'AES-GCM', iv: ivBytes },
