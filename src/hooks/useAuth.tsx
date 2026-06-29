@@ -27,6 +27,7 @@ interface AuthContextType {
   changePin: (oldPin: string, newPin: string) => Promise<boolean>;
   setupBiometrics: () => Promise<boolean>;
   setupBiometricsWithPin: (pin: string) => Promise<boolean>;
+  disableBiometrics: () => Promise<boolean>;
   unlockWithBiometrics: () => Promise<boolean>;
   lockVault: () => void;
   resetVault: () => Promise<void>;
@@ -533,6 +534,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
+  const disableBiometrics = async (): Promise<boolean> => {
+    const info = await dbService.getAuthInfo();
+    if (!info) return false;
+
+    try {
+      const updatedInfo: DBAuthInfo = {
+        ...info,
+        hasBiometrics: false,
+      };
+      delete updatedInfo.webauthnCredentialId;
+
+      await dbService.saveAuthInfo(updatedInfo);
+      localStorage.removeItem('lbv_encrypted_pin_wrapped');
+      localStorage.removeItem('lbv_biometric_key');
+      setHasBiometrics(false);
+      return true;
+    } catch (e) {
+      console.error('Failed to disable biometrics:', e);
+      return false;
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -555,6 +577,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         // Bind correct biometrics enrollment method
         setupBiometricsWithPin: setupBiometricsWithPin,
+        disableBiometrics: disableBiometrics,
         unlockWithBiometrics,
         lockVault,
         resetVault,

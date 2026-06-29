@@ -32,6 +32,7 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
     setDefaultCity,
     changePin,
     setupBiometricsWithPin, // WebAuthn custom setup
+    disableBiometrics,
     biometricsSupported,
     hasBiometrics,
     resetVault,
@@ -148,6 +149,21 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
       setBiometricMsg({ text: 'An error occurred during enrollment.', error: true });
     } finally {
       setBiometricLoading(false);
+    }
+  };
+
+  // Unenrolling biometric lock
+  const handleDisableBiometrics = async () => {
+    setBiometricMsg(null);
+    try {
+      const success = await disableBiometrics();
+      if (success) {
+        setBiometricMsg({ text: 'Biometrics unenrolled successfully.', error: false });
+      } else {
+        setBiometricMsg({ text: 'Failed to disable biometrics.', error: true });
+      }
+    } catch (err) {
+      setBiometricMsg({ text: 'An error occurred while unenrolling.', error: true });
     }
   };
 
@@ -336,9 +352,17 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
                           Enroll
                         </button>
                       ) : (
-                        <span className="text-[9px] text-green-400 font-semibold bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
-                          Enrolled
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-green-400 font-semibold bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
+                            Enrolled
+                          </span>
+                          <button
+                            onClick={handleDisableBiometrics}
+                            className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 rounded-md text-[9px] font-semibold text-rose-400 hover:text-rose-300 transition-all active:scale-95"
+                          >
+                            Unenroll
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
