@@ -640,10 +640,14 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       // Default: Encrypted with current Master Key
       const { ciphertext, iv } = await encryptText(masterKey, payloadString);
       
+      const info = await dbService.getAuthInfo();
+      const salt = info ? info.salt : '';
+
       const containerObj = {
         ciphertext,
         iv,
         isCustomPin: false,
+        salt,
       };
       
       await addLogEntry('Backup', 'Encrypted vault backup exported with master PIN.');
@@ -670,7 +674,19 @@ export const DbProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         const tempKey = await deriveKeyFromPin(backupPin, tempSaltBytes);
         plaintext = await decryptText(tempKey, container.ciphertext, container.iv);
       } else {
-        plaintext = await decryptText(masterKey, container.ciphertext, container.iv);
+        try {
+          plaintext = await decryptText(masterKey, container.ciphertext, container.iv);
+        } catch (e) {
+          if (container.salt && backupPin) {
+            const tempSaltBytes = new Uint8Array(base64ToArrayBuffer(container.salt));
+            const tempKey = await deriveKeyFromPin(backupPin, tempSaltBytes);
+            plaintext = await decryptText(tempKey, container.ciphertext, container.iv);
+          } else if (container.salt && !backupPin) {
+            return { success: false, count: 0, error: 'BACKUP_PIN_REQUIRED' };
+          } else {
+            throw e;
+          }
+        }
       }
 
       const imported = JSON.parse(plaintext);

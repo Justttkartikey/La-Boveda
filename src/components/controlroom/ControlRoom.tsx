@@ -211,7 +211,7 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
           setRestorePinInput('');
         } else {
           if (res.error === 'BACKUP_PIN_REQUIRED') {
-            setRestoreMsg({ text: 'This backup is encrypted with a custom PIN. Please provide the PIN below.', error: true });
+            setRestoreMsg({ text: 'This backup is encrypted with a PIN. Please provide the PIN below.', error: true });
           } else {
             setRestoreMsg({ text: 'Failed to restore backup. Invalid PIN or corrupted data.', error: true });
           }

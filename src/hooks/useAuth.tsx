@@ -392,6 +392,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             authenticatorAttachment: 'platform',
             userVerification: 'required',
           },
+          extensions: {
+            hmacCreateSecret: true
+          }
         },
       }) as PublicKeyCredential;
 
@@ -401,25 +404,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Now create a signature to wrap the PIN
       const signChallenge = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+      const hmacSalt = new Uint8Array(32);
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge: signChallenge,
           allowCredentials: [{ type: 'public-key', id: credential.rawId }],
           userVerification: 'required',
+          extensions: {
+            hmacGetSecret: {
+              salt1: hmacSalt
+            }
+          } as any
         }
       }) as PublicKeyCredential & { response: AuthenticatorAssertionResponse };
 
-      if (!assertion || !assertion.response.signature) return false;
+      if (!assertion) return false;
 
-      // Hash the signature
-      const sigHashBytes = await window.crypto.subtle.digest('SHA-256', assertion.response.signature);
-      const wrapKey = await window.crypto.subtle.importKey(
-        'raw',
-        sigHashBytes,
-        { name: 'AES-GCM' },
-        false,
-        ['encrypt']
-      );
+      // Extract HMAC secret if supported by the platform/browser
+      const results = assertion.getClientExtensionResults() as any;
+      let secret: ArrayBuffer | null = null;
+      if (results && results.hmacGetSecret) {
+        const output = results.hmacGetSecret;
+        if (output.output instanceof ArrayBuffer) {
+          secret = output.output;
+        } else if (output instanceof ArrayBuffer) {
+          secret = output;
+        } else if (output.output && output.output.buffer instanceof ArrayBuffer) {
+          secret = output.output.buffer;
+        }
+      }
+
+      let wrapKey: CryptoKey;
+      let isHmac = false;
+
+      if (secret) {
+        const sigHashBytes = await window.crypto.subtle.digest('SHA-256', secret);
+        wrapKey = await window.crypto.subtle.importKey(
+          'raw',
+          sigHashBytes,
+          { name: 'AES-GCM' },
+          false,
+          ['encrypt']
+        );
+        isHmac = true;
+      } else {
+        // Fallback: generate a random key and store it locally
+        const fallbackKeyBytes = generateRandomBytes(32);
+        localStorage.setItem('lbv_biometric_fallback_key', arrayBufferToBase64(fallbackKeyBytes.buffer as ArrayBuffer));
+        wrapKey = await window.crypto.subtle.importKey(
+          'raw',
+          fallbackKeyBytes,
+          { name: 'AES-GCM' },
+          false,
+          ['encrypt']
+        );
+      }
 
       // Encrypt the PIN with this wrap key
       const iv = generateRandomBytes(12);
@@ -434,6 +473,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const wrappedData = {
         ciphertext: arrayBufferToBase64(encryptedPinBuffer),
         iv: arrayBufferToBase64(iv.buffer as ArrayBuffer),
+        isHmac,
       };
 
       localStorage.setItem('lbv_encrypted_pin_wrapped', JSON.stringify(wrappedData));
@@ -464,6 +504,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const credentialIdBytes = new Uint8Array(base64ToArrayBuffer(info.webauthnCredentialId));
       const signChallenge = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+      const hmacSalt = new Uint8Array(32);
 
       // Request biometric verification (assertion)
       const assertion = await navigator.credentials.get({
@@ -471,20 +512,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           challenge: signChallenge,
           allowCredentials: [{ type: 'public-key', id: credentialIdBytes }],
           userVerification: 'required',
+          extensions: {
+            hmacGetSecret: {
+              salt1: hmacSalt
+            }
+          } as any
         }
       }) as PublicKeyCredential & { response: AuthenticatorAssertionResponse };
 
-      if (!assertion || !assertion.response.signature) return false;
+      if (!assertion) return false;
 
-      // Hash signature to get decrypt key
-      const sigHashBytes = await window.crypto.subtle.digest('SHA-256', assertion.response.signature);
-      const wrapKey = await window.crypto.subtle.importKey(
-        'raw',
-        sigHashBytes,
-        { name: 'AES-GCM' },
-        false,
-        ['decrypt']
-      );
+      // Extract HMAC secret if supported by the platform/browser
+      const results = assertion.getClientExtensionResults() as any;
+      let secret: ArrayBuffer | null = null;
+      if (results && results.hmacGetSecret) {
+        const output = results.hmacGetSecret;
+        if (output.output instanceof ArrayBuffer) {
+          secret = output.output;
+        } else if (output instanceof ArrayBuffer) {
+          secret = output;
+        } else if (output.output && output.output.buffer instanceof ArrayBuffer) {
+          secret = output.output.buffer;
+        }
+      }
 
       // Decrypt PIN from localStorage
       const wrappedStr = localStorage.getItem('lbv_encrypted_pin_wrapped');
@@ -493,6 +543,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const wrappedObj = JSON.parse(wrappedStr);
       const ivBytes = new Uint8Array(base64ToArrayBuffer(wrappedObj.iv));
       const ciphertextBytes = base64ToArrayBuffer(wrappedObj.ciphertext);
+
+      let wrapKey: CryptoKey;
+
+      if (secret && wrappedObj.isHmac) {
+        const sigHashBytes = await window.crypto.subtle.digest('SHA-256', secret);
+        wrapKey = await window.crypto.subtle.importKey(
+          'raw',
+          sigHashBytes,
+          { name: 'AES-GCM' },
+          false,
+          ['decrypt']
+        );
+      } else {
+        // Use fallback key from localStorage
+        const fallbackKeyStr = localStorage.getItem('lbv_biometric_fallback_key');
+        if (!fallbackKeyStr) return false;
+        const fallbackKeyBytes = new Uint8Array(base64ToArrayBuffer(fallbackKeyStr));
+        wrapKey = await window.crypto.subtle.importKey(
+          'raw',
+          fallbackKeyBytes,
+          { name: 'AES-GCM' },
+          false,
+          ['decrypt']
+        );
+      }
 
       const decryptedPinBuffer = await window.crypto.subtle.decrypt(
         { name: 'AES-GCM', iv: ivBytes },

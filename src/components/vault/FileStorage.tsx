@@ -43,15 +43,6 @@ export const FileStorage: React.FC<FileStorageProps> = ({
 
   const filesList = items.filter((i) => i.type === 'file') as Extract<DecryptedItem, { type: 'file' }>[];
 
-  const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'json', 'md'];
-  const allowedMimeTypes = [
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'text/plain',
-    'application/json',
-    'text/markdown',
-  ];
 
   // Open modal handler
   React.useEffect(() => {
@@ -64,20 +55,9 @@ export const FileStorage: React.FC<FileStorageProps> = ({
   }, [createModalOpen, createModalType]);
 
   const validateFile = (file: File): boolean => {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    
-    // Check file format extension or MIME type
-    const isExtensionAllowed = ext && allowedExtensions.includes(ext);
-    const isMimeAllowed = allowedMimeTypes.includes(file.type) || file.type.startsWith('text/');
-
-    if (!isExtensionAllowed && !isMimeAllowed) {
-      setUploadError('Unsupported file format. Supported formats: PDF, PNG, JPG, JPEG, TXT, JSON, MD.');
-      return false;
-    }
-
-    // Strict 2 MB limit check
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadError('File exceeds the maximum size limit of 2 MB.');
+    // Strict 10 MB limit check
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File exceeds the maximum size limit of 10 MB.');
       return false;
     }
 
