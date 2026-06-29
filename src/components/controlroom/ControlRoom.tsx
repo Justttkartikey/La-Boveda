@@ -232,7 +232,7 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
     setWipeError(null);
 
     const upperInput = wipeConfirmInput.toUpperCase();
-    if (upperInput !== 'DELETE ALL' && upperInput !== 'ELIMINAR TODO') {
+    if (upperInput !== 'DELETE ALL') {
       setWipeError('Confirmation text is incorrect.');
       return;
     }
@@ -679,7 +679,7 @@ export const ControlRoom: React.FC<ControlRoomProps> = ({ onVersionClick }) => {
 
                   <button
                     type="submit"
-                    disabled={wipeConfirmInput.toUpperCase() !== 'DELETE ALL' && wipeConfirmInput.toUpperCase() !== 'ELIMINAR TODO'}
+                    disabled={wipeConfirmInput.toUpperCase() !== 'DELETE ALL'}
                     className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 rounded-2xl text-xs font-bold text-white transition-all disabled:opacity-50 active:scale-98"
                   >
                     Wipe Database and Re-initialize App
